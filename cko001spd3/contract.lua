@@ -28,7 +28,7 @@ function place_banner ()
     msatoshi_per_hour = tonumber(call.payload.msatoshi_per_hour)
   }
 
-  contract.state.banners[banner.id] = banner
+  contract.state.banners[id] = banner
   bump()
 end
 
