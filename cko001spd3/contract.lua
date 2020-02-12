@@ -64,7 +64,7 @@ function queue_ad ()
   }
   
   if call.payload.image_url then
-    ad.image_url = tostring(call.payload.image_url),
+    ad.image_url = tostring(call.payload.image_url)
   elseif call.payload.text then
     ad.text = tostring(call.payload.text)
   else
