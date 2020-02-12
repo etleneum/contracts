@@ -56,14 +56,20 @@ function queue_ad ()
 
   local hours = call.msatoshi / banner.msatoshi_per_hour
   local seconds = hours * 60 * 60
-
+  
   local ad = {
     msatoshi = call.msatoshi,
     seconds = seconds,
-    link = tostring(call.payload.link),
-    image_url = tostring(call.payload.image_url),
-    text = tostring(call.payload.text)
+    link = tostring(call.payload.link)
   }
+  
+  if call.payload.image_url then
+    ad.image_url = tostring(call.payload.image_url),
+  elseif call.payload.text then
+    ad.text = tostring(call.payload.text)
+  else
+    error('ad must have image or text')
+  end
 
   -- place this ad in the queue
   local queue = contract.state.ad_queue[banner_id]
