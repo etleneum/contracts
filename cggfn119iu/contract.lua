@@ -54,7 +54,11 @@ function bump ()
 
   -- sort ranking
   local function ratesorter (a, b)
-    return a.rate > b.rate
+    if a.rate == b.rate then
+      return a.placed < b.placed
+    else
+      return a.rate > b.rate
+    end
   end
   table.sort(contract.state.ranking, ratesorter)
 end
