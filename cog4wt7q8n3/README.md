@@ -2,6 +2,8 @@ This exists so you can link your etleneum.com account (which is just a random id
 
 To `link` an identity, make an authenticated call providing your `keybase_name` and a `bundle` of message + signature as produced by https://keybase.io/sign. The message must be `{{state.challenge}}` and the bundle must be passed with the correct newlines. Example:
 
+Helper site with less intimidating interface: https://kad.etleneum.com/
+
 ```
 -----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA512

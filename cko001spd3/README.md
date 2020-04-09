@@ -7,3 +7,5 @@ It goes like this:
 * Bob wants to advertise his business _Bob's Mushrooms_, he is casually browsing _https://alice.com/_, sees the banner there, empty, saying "advertise here" and linking to this contract and the banner id.
 * He decides Alice is trustworthy enough to actually display the ad he is going to pay for instead of just faking the display and getting the money anyway.
 * He calls `queue_ad` with the address of mushroom picture as `image_url` and _https://bobsmushrooms.com/_ as the `link`.
+
+Helper website with less intimidating interface: https://banners.etleneum.com/
