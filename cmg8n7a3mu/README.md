@@ -1,5 +1,9 @@
 This contract allows anyone to `ask` questions to any known person (identified by their [Keybase](https://keybase.io/) username) and actually get answers.
 
+Helpers website with less intimidating interface: https://s4a.etleneum.com/
+
+---
+
 Askers attach **money compensations** to their questions, so the person to whom they're asking are incentivized to spend some minutes crafting an `answer`.
 
 More than that: if some other person is also interested in the answer to that specific question they can `add_funds` to it to increase the incentives and the possibilities of attracting the attention of the person being asked.
