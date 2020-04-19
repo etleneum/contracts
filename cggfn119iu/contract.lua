@@ -15,15 +15,19 @@ function sponsor_ad ()
     msatoshi = call.msatoshi,
     seconds = seconds,
     placed = os.time(),
-    link = tostring(call.payload.link)
+    link = tostring(call.payload.link),
+    country = call.payload.country,
+    state = call.payload.state,
+    years_experience = call.payload.years_experience,
+    keybase = call.payload.keybase,
+    twitter = call.payload.twitter,
+    telegram = call.payload.telegram
   }
 
   if call.payload.image_url then
     ad.image_url = tostring(call.payload.image_url)
   elseif call.payload.text then
     ad.text = tostring(call.payload.text)
-  else
-    error('ad must have image or text')
   end
 
   -- place this ad in the ranking
