@@ -2,11 +2,14 @@ function __init__ ()
   return {}
 end
 
-local STAKE_PER_OFFER = 100000
+local STAKE_PER_OFFER = 100000 -- in msat
+
+local tip = tonumber(http.gettext("https://blockstream.info/api/blocks/tip/height"))
+if not tip then
+  error("couldn't get current block")
+end
 
 function queuepay ()
-  bump()
-
   if call.msatoshi < 1000 then
     error("must include at least 1 sat")
   end
@@ -19,6 +22,8 @@ function queuepay ()
     error("sats to destination can't be negative")
   end
 
+  bump()
+
   -- if amount paid contains msatoshi not specified in fees, add these to the fees
   local extra_msat = call.msatoshi - (sat * 1000 + fee_msat)
   fee_msat = fee_msat + extra_msat
@@ -26,7 +31,10 @@ function queuepay ()
   local offer = contract.state[addr] or {
     block = 0,
     sat = 0,
-    fee_msat = 0
+    fee_msat = 0,
+    stake = 0,
+    waiting = nil,
+    reserved = nil
   }
 
   if offer.reserved then
@@ -40,17 +48,17 @@ function queuepay ()
 
   -- this prevents onchain transactors from
   -- altering amounts to suit an existing transaction that wasn't made by them
-  offer.block = _getblockchaintip()
+  offer.block = tip
 
   contract.state[addr] = offer
 end
 
 function reserve ()
-  bump()
-
   if not account.id then
     error('must be authenticated!')
   end
+
+  bump()
 
   local stake_needed = 0
 
@@ -63,8 +71,9 @@ function reserve ()
 
     offer.reserved = {
       to = account.id,
-      upto = _getblockchaintip() + 6 -- reserve for 6 blocks
+      upto = tip + 3 -- reserve for 3 blocks
     }
+    offer.stake = offer.stake + STAKE_PER_OFFER
 
     stake_needed = stake_needed + STAKE_PER_OFFER
   end
@@ -75,75 +84,77 @@ function reserve ()
 end
 
 function txsent ()
-  bump()
-
   if not account.id then
     error('must be authenticated!')
   end
 
-  local tx = http.getjson("https://blockstream.info/api/tx/" .. call.payload.txid)
-
-  if not tx.status.confirmed then
-    error('transaction must be confirmed')
-  end
-
-  local prize = 0
+  local tx = _gettx(call.payload.txid)
 
   for _, vout in ipairs(tx.vout) do
     local addr = vout.scriptpubkey_address
     local offer = contract.state[addr]
 
     if offer then
-      -- check if this user isn't reporting an older transaction as if it was recent
-      if offer.block >= tx.status.block_height then
-        error('transaction is older than the offer')
+      -- only transactions newer than the offers are valid
+      if tx.status.block_height and offer.block < tx.status.block_height then
+        if vout.value ~= offer.sat then
+          -- check amounts match exactly and this offer is not reserved
+          util.print("output to " .. addr .. " (" .. vout.value .. ") is different than expected (" .. offer.sat .. ")")
+        elseif offer.reserved and offer.reserved.to ~= account.id then
+          -- check reservation by someone else
+          util.print(addr .. " reserved to " .. offer.reserved.to .. ". you are " .. account.id)
+        else
+          -- make this offer wait for confirmation of this
+          -- (will happen in the next bump if already confirmed)
+          offer.reserved = { to = account.id }
+          offer.waiting = {
+            txid = call.payload.txid,
+            last_block_checked = tip - 1
+          }
+        end
       end
-
-      -- check amounts match exactly
-      if vout.value ~= offer.sat then
-        error("output to " .. addr .. " (" .. vout.value .. ") is different than expected (" .. offer.sat .. ")")
-      end
-
-      -- check reservation status
-      if offer.reserved and offer.reserved.to ~= account.id then
-        error(addr .. " reserved to " .. offer.reserved.to .. ". you are " .. account.id)
-      elseif offer.reserved and offer.reserved.to == account.id then
-        -- reserved to this account
-        prize = prize + STAKE_PER_OFFER -- return staked sats for reservation
-      else
-        -- offer wasn't reserved, just proceed (it can be paid even if not reserved)
-      end
-
-      -- add all amounts to the prize
-      prize = prize + offer.sat * 1000 + offer.fee_msat
-
-      -- delete offer
-      contract.state[addr] = nil
     end
   end
 
-  -- pay the transactor
-  contract.send(account.id, prize)
+  bump()
 end
 
 function bump ()
-  local tip = _getblockchaintip()
-
-  for _, offer in pairs(contract.state) do
-    if offer.reserved and offer.reserved.upto < tip then
+  for addr, offer in pairs(contract.state) do
+    if not offer.waiting and offer.reserved and offer.reserved.upto < tip then
+      -- reservation period ended, not waiting for any tx to confirm
       -- remove reservation
-      offer.reserved = nil
-
-      -- revert staked sats to the offer fee
-      offer.fee_msat = offer.fee_msat + STAKE_PER_OFFER
+      offer.reserved = nil -- offer.stake will remain
+    elseif offer.waiting and offer.waiting.last_block_checked < tip then
+      -- check if there are at least 2 confirmations
+      local tx, err = _gettx(offer.waiting.txid)
+      if err and err:match('status code: (%d+)') == 404 then
+        -- tx is not in the mempool anymore
+        util.print('tx ' .. offer.waiting.txid .. ' not in the mempool anymore')
+        offer.waiting = nil
+      elseif tx.status.confirmed and tip - tx.status.block_height >= 2 then
+        -- ok
+        -- pay the transactor and delete the offer
+        util.print('tx ' .. offer.waiting.txid .. ' confirmed, resolving offer ' .. addr .. ' to ' .. offer.reserved.to)
+        contract.send(offer.reserved.to, offer.stake + offer.sat * 1000 + offer.fee_msat)
+        contract.state[addr] = nil
+      else
+        util.print('tx ' .. offer.waiting.txid .. ' does not have 2 confirmations yet, will keep waiting for it')
+        offer.waiting.last_block_checked = tip
+      end
     end
   end
 end
 
-function _getblockchaintip ()
-  local tip = tonumber(http.gettext("https://blockstream.info/api/blocks/tip/height"))
-  if not tip then
-    error("couldn't get current block")
+local txcache = {}
+function _gettx (txid)
+  local cached = txcache[txid]
+  if cached then
+    return cached[1], cached[2]
   end
-  return tip
+
+  local tx, err = http.getjson("https://blockstream.info/api/tx/" .. txid)
+  txcache[txid] = {tx, err}
+
+  return _gettx(txid)
 end
