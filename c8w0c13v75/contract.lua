@@ -73,7 +73,7 @@ function reserve ()
       to = account.id,
       upto = tip + 3 -- reserve for 3 blocks
     }
-    offer.stake = offer.stake + STAKE_PER_OFFER
+    offer.stake = (offer.stake or 0) + STAKE_PER_OFFER
 
     stake_needed = stake_needed + STAKE_PER_OFFER
   end
