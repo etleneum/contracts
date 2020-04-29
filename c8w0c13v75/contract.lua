@@ -90,13 +90,15 @@ function txsent ()
 
   local tx = _gettx(call.payload.txid)
 
+  local offersmatched = 0
+
   for _, vout in ipairs(tx.vout) do
     local addr = vout.scriptpubkey_address
     local offer = contract.state[addr]
 
     if offer then
       -- only transactions newer than the offers are valid
-      if tx.status.block_height and offer.block < tx.status.block_height then
+      if not tx.status.block_height or (offer.block < tx.status.block_height) then
         if vout.value ~= offer.sat then
           -- check amounts match exactly and this offer is not reserved
           util.print("output to " .. addr .. " (" .. vout.value .. ") is different than expected (" .. offer.sat .. ")")
@@ -106,15 +108,22 @@ function txsent ()
         else
           -- make this offer wait for confirmation of this
           -- (will happen in the next bump if already confirmed)
+          util.print(offer)
           offer.reserved = { to = account.id }
           offer.waiting = {
             txid = call.payload.txid,
             last_block_checked = tip - 1
           }
+          offersmatched = offersmatched + 1
         end
       end
     end
   end
+
+  if offersmatched == 0 then
+    error("transaction didn't match any offer")
+  end
+  util.print("offers matched by the transaction: " .. offersmatched)
 
   bump()
 end
