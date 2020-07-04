@@ -45,10 +45,10 @@ function acceptchallenge ()
   local color = 'black'
   if data.black ~= nil then
     color = 'white'
-  end
 
-  if data.white ~= nil then
-    error("this game already has 2 players.")
+    if data.white ~= nil then
+      error("this game already has 2 players.")
+    end
   end
 
   data[color] = secret_hash
