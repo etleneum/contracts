@@ -8,7 +8,7 @@ function __init__ ()
   }
 end
 
-function buy_ticket ()
+function buyticket ()
   if not account.id then
     error("must be authenticated!")
   end
