@@ -1,0 +1,7 @@
+To create markets and buy shares, please use the UI at https://predictions.etleneum.com/ or compatible (since it involves some calculation that must be done before calling). To resolve markets you can use the interface here.
+
+This contract enables anyone to create a prediction market (with just "yes" or "no" possible results) that can be resolved at anytime by a set of predefined Etleneum accounts. The market creator chooses which accounts will resolve it and people can buy and sell shares of _yes_ or _no_. By default the market creator will be the sole resolver, but they can also make the `createmarket` call unauthenticated and specify a list of resolvers manually (beware: specifying an invalid resolver will probably cause the market to never resolve).
+
+It comes with an automated market maker is based on the simplest version of [this algorithm](https://docs.google.com/spreadsheets/d/1fzpjJf3SfWFhaPfx6daAFvfOmBDxJJX_fnoGmlZXVNQ/edit#gid=2042525619). For it to work the market creator must make an initial deposit and after that the market will never be bankrupt. A _liquidity factor_ is also specified upon market creation, it specifies basically how much capital the creator wants to deposit initially to make the market less volatile or something like that.
+
+`exchange` can be called with either a positive or a negative number of shares. If negative, these shares will be sold and the money will be sent to the seller's account. If positive, the correct amount of satoshis will have to be included in the call.
