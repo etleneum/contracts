@@ -42,6 +42,33 @@ function createmarket ()
   contract.state[util.cuid()] = market
 end
 
+function increaseliquidity ()
+  local id = call.payload.id
+  local market = contract.state[id]
+  if not market then
+    error('market not found!')
+  end
+
+  local newliquidity = call.payload.liquidity
+  if newliquidity <= market.liquidity then
+    error("can't decrease liquidity!")
+  end
+
+  local newbalance = _balance(
+    newliquidity,
+    _countshares(market.shares['yes']),
+    _countshares(market.shares['no'])
+  )
+
+  local balancediff = newbalance - market.balance
+  if balancediff ~= call.msatoshi then
+      error("must include " .. balancediff .. "msat for this call.")
+  end
+
+  market.balance = newbalance
+  market.liquidity = newliquidity
+end
+
 function exchange ()
   if not account.id then
     error('must be authenticated!')
