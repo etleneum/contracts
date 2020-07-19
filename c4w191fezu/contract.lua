@@ -75,66 +75,70 @@ function extract ()
     error("invalid gameid for this challenge!")
   end
 
-  local winner = _gamewinner(gameid)
-  if not winner then
-    error("this game doesn't have a winner yet.")
-  end
-
-  if util.sha256(secret) ~= data[winner] then
-    error("the winner was " .. winner .. ", your secret was invalid for that player.")
-  end
-
-  contract.send(account.id, data.msatoshi)
-  contract.state[challenge] = nil
-
-  util.print("satoshis sent to " .. account.id)
-end
-
--- this is for when a game is abandoned.
--- any of the two players can extract all the sats after 6 months.
-function cancel ()
-  local challenge = call.payload.challenge
-  local gameid = call.payload.gameid
-  local secret = call.payload.secret
-
-  if not account.id then
-    error("must be authenticated!")
-  end
-
-  local data = contract.state[challenge]
-  if not data then
-    error("challenge not found!")
-  end
-
-  if data.creation + 15552000 > os.time() then
-    error("too soon to cancel this challenge, must wait 6 months since the creation.")
-  end
-
-  if util.sha256(gameid) ~= data.gameid_hash then
-    error("invalid gameid for this challenge!")
-  end
-
   local secret_hash = util.sha256(secret)
-  if secret_hash ~= data.black and secret_hash ~= data.white then
-    error("you were not a player in this game.")
+
+  local winner, is_draw, is_notfound = _gamewinner(gameid)
+  is_draw = is_draw or (is_notfound and data.creation + 259200 < os.time())
+  if not winner and not is_draw then
+    error("this game doesn't have a result yet.")
   end
 
-  contract.send(account.id, data.msatoshi)
-  contract.state[challenge] = nil
-  util.print("satoshis sent to " .. account.id)
+  if is_draw then
+    if data.black and data.white then
+      -- return half to this and exclude it, so the next call made by the other
+      -- player will fall on the next clause
+      if data.black == secret_hash then
+        contract.send(account.id, math.floor(data.msatoshi / 2))
+        data.black = nil
+        data.msatoshi = math.floor(data.msatoshi / 2)
+        return
+      elseif data.white == secret_hash then
+        contract.send(account.id, math.floor(data.msatoshi / 2))
+        data.white = nil
+        data.msatoshi = math.floor(data.msatoshi / 2)
+        return
+      end
+    else
+      -- return all to this player, either because the challenge was never accepted
+      -- or because the other player has already cashed out their part
+      if data.black == secret_hash then
+        contract.send(account.id, data.msatoshi)
+        contract.state[challenge] = nil
+        return
+      elseif data.white == secret_hash then
+        contract.send(account.id, data.msatoshi)
+        contract.state[challenge] = nil
+        return
+      end
+    end
+  elseif secret_hash == data[winner] then
+    -- send all to this player since they are the winner
+    contract.send(account.id, data.msatoshi)
+    contract.state[challenge] = nil
+    return
+  end
+
+  error("the given player secret was invalid.")
 end
 
 function _gamewinner (gameid)
   local resp, err = http.gettext('https://lichess.org/game/export/' .. gameid .. '?moves=false&clocks=false&evals=false&opening=false&literate=false&pgnInJson=false')
   if not resp or err ~= nil then
-    return nil
+    if err == 'response status code: 404' then
+      return nil, true, true
+    end
+    return nil, false, false
   end
 
   if resp:find('[Result "1-0"]', nil, true) then
-    return 'white'
+    return 'white', false, false
   elseif resp:find('[Result "0-1"]', nil, true) then
-    return 'black'
+    return 'black', false, false
+  elseif resp:find('[Termination "Abandoned"]', nil, true) then
+    return nil, true, false
+  elseif resp:find('[Result "1/2-1/2"]', nil, true) then
+    return nil, true, false
   else
-    return nil
+    return nil, false, false
   end
 end
