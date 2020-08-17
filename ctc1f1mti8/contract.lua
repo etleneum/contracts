@@ -14,7 +14,7 @@ function register ()
         key:find(' ') or key:len() > 50 or
         type(name) ~= 'string' or name == '' or
         type(url) ~= 'string' or url:sub(0, 4) ~= 'http' or
-        (type(logo) ~= 'string' or logo ~= nil) then
+        (type(logo) ~= 'string' and logo ~= nil) then
     error("missing owner or key or name or url!")
   end
 
