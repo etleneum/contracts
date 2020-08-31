@@ -11,7 +11,7 @@ function register ()
 
   if not owner or owner == '' or
         type(key) ~= 'string' or key == '' or
-        key:find(' ') or key:len() > 50 or
+        key:find(' ') or utf8.len(key) > 50 or
         type(name) ~= 'string' or name == '' or
         type(url) ~= 'string' or url:sub(0, 4) ~= 'http' or
         (type(logo) ~= 'string' and logo ~= nil) then
@@ -58,7 +58,7 @@ function request ()
   local name = call.payload.name
   local description = call.payload.description
 
-  if type(name) ~= 'string' or name == '' or name:len() > 50 then
+  if type(name) ~= 'string' or name == '' or utf8.len(name) > 50 then
     error('name must have between 1 and 50 characters')
   end
 
