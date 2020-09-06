@@ -1,0 +1,1 @@
+This faucet will pay 10 sats until drained
