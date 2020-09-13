@@ -9,7 +9,7 @@ You can sell them with only a 1% fee
 Users can trasfer coins directly to one another, this is the future of commerce.
 
 To buy MAGDA:
-1) use an lnurl wallet like www.bitcoin-wallet.com to login
+1) use an lnurl wallet like [BLW](https://lightning-wallet.com) or [@lntxbot](https://t.me/lntxbot) to login
 2) click buy, enter a large amount of Satoshi.
 3) be sure to select the checkbox to authenticate with your account
 4) click prepare call, pay the QR.
