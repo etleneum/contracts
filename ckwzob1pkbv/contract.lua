@@ -36,6 +36,9 @@ function buy()
         error('not authenticated')
     end
     local amount = call.msatoshi 
+    if amount > 10000000 then
+        error('too many sats sent in a single call')
+    end
     _transfer_exec(contract.state.admin, account.id, amount / contract.state.price)
 end
 
