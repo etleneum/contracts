@@ -8,6 +8,10 @@ function queue ()
   local msat = call.msatoshi - fee_msat
   local min_msat = tostring(math.floor(tonumber(call.payload.min_msat)))
 
+  if util.check_address(addr) ~= nil then
+    error("address " .. addr .. " is invalid")
+  end
+
   if fee_msat < 0 then
     error("fee_msat can't be negative")
   end

@@ -18,6 +18,10 @@ function queuepay ()
   local fee_msat = tonumber(call.payload.fee_msat)
   local sat = math.floor((call.msatoshi - fee_msat) / 1000)
 
+  if util.check_address(addr) ~= nil then
+    error("address " .. addr .. " is invalid")
+  end
+
   if sat < 0 then
     error("sats to destination can't be negative")
   end
