@@ -4,7 +4,7 @@ end
 
 local STAKE_PER_OFFER = 100000 -- in msat
 
-local tip = tonumber(http.gettext("https://blockstream.info/api/blocks/tip/height"))
+local tip = tonumber(http.gettext("https://mempool.space/api/blocks/tip/height"))
 if not tip then
   error("couldn't get current block")
 end
@@ -141,7 +141,7 @@ function bump ()
     elseif offer.waiting and offer.waiting.last_block_checked < tip then
       -- check if there are at least 2 confirmations
       local tx, err = _gettx(offer.waiting.txid)
-      if err and err:match('status code: (%d+)') == 404 then
+      if err and err:match('status code: (%d+)') == '404' then
         -- tx is not in the mempool anymore
         util.print('tx ' .. offer.waiting.txid .. ' not in the mempool anymore')
         offer.waiting = nil
@@ -166,7 +166,7 @@ function _gettx (txid)
     return cached[1], cached[2]
   end
 
-  local tx, err = http.getjson("https://blockstream.info/api/tx/" .. txid)
+  local tx, err = http.getjson("https://mempool.space/api/tx/" .. txid)
   txcache[txid] = {tx, err}
 
   return _gettx(txid)
