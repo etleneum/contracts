@@ -108,6 +108,10 @@ function setstatus ()
     error("key " .. key .. " doesn't not exist.")
   end
 
+  if domain.requests[idx].status ~= "open" then
+    error(key .. ":" .. idx .. " is not open.")
+  end
+
   if account.id ~= domain.owner then
     error("only the domain owner can do this")
   end
