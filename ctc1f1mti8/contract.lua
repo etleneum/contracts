@@ -108,6 +108,7 @@ function setstatus ()
     error("key " .. key .. " doesn't not exist.")
   end
 
+  local idx = tonumber(call.payload.idx)
   if domain.requests[idx].status ~= "open" then
     error(key .. ":" .. idx .. " is not open.")
   end
@@ -116,7 +117,6 @@ function setstatus ()
     error("only the domain owner can do this")
   end
 
-  local idx = tonumber(call.payload.idx)
   local status = call.payload.status
   if status ~= "finished" and status ~= "canceled" then
     error("status must be: finished or canceled.")
